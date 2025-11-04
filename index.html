@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocaLing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Welcome to VocaLing: Your Ultimate Language Learning Voicebot!</h1>
+            <p>Click the button below and start speaking. VocaLing will help you with your queries.</p>
+        </header>
+        
+        <div class="voice-interaction">
+            <button id="start-btn">
+                <img src="https://img.icons8.com/ios/452/microphone.png" alt="Start" />
+                Start Voicebot
+            </button>
+            <div id="response"></div>
+        </div>
+
+        <script>
+            const startButton = document.getElementById('start-btn');
+            const responseDiv = document.getElementById('response');
+        
+            startButton.addEventListener('click', () => {
+                if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+                    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                    recognition.lang = 'en-US';
+                    
+                    recognition.onstart = function() {
+                        responseDiv.innerHTML = "Listening...";
+                    };
+                    
+                    recognition.onresult = async function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        responseDiv.innerHTML = `You said: ${transcript}<br>Processing...`;
+        
+                        try {
+                            // Send user input to Flask backend
+                            const response = await fetch('/ask', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ text: transcript })
+                            });
+        
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+        
+                            const data = await response.json();
+                            const aiResponse = data.response || "No response received from AI.";
+                            const audioUrl = data.audio_url || "";
+        
+                            // Display AI response and play audio
+                            responseDiv.innerHTML += `<br><strong>AI:</strong> ${aiResponse}`;
+        
+                            if (audioUrl) {
+                                const audio = new Audio(audioUrl);
+                                audio.play();
+                            }
+                        } catch (error) {
+                            responseDiv.innerHTML += `<br>Error: ${error.message}`;
+                        }
+                    };
+        
+                    recognition.onerror = function(event) {
+                        responseDiv.innerHTML = `Error: ${event.error}`;
+                    };
+        
+                    recognition.start();
+                } else {
+                    responseDiv.innerHTML = "Speech recognition is not supported in this browser.";
+                }
+            });
+        </script>
+        
+        
+
+
+   
+</body>
+</html>
